@@ -4,8 +4,10 @@
 
 set -e
 
-ARTIST_LIST_PATH='data/artist_list.txt'
+DATA_FOLDER='data/'
+ARTIST_LIST_PATH=$DATA_FOLDER'artist_list.txt'
 
 
 python vagalume_crawler.py \
+    --data-folder=${DATA_FOLDER} \
     --artist-list-path=${ARTIST_LIST_PATH}
