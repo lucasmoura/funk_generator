@@ -1,4 +1,5 @@
 import requests
+import unicodedata
 
 from bs4 import BeautifulSoup
 from pathlib import Path
@@ -13,10 +14,15 @@ class MusicCrawler:
 
         self.vagalume_url = 'https://www.vagalume.com.br/'
 
+    def remove_accented_characters(self, artist_name):
+        artist_name = unicodedata.normalize('NFD', artist_name).encode('ascii', 'ignore')
+        return artist_name.decode('ascii')
+
     def parse_artist_name(self, artist_name):
         artist_name = artist_name.strip()
         artist_name = artist_name.lower()
         artist_name = artist_name.replace(' ', '-')
+        artist_name = self.remove_accented_characters(artist_name)
 
         return artist_name
 
@@ -35,6 +41,9 @@ class MusicCrawler:
         for track_href in tracks_hrefs:
             name = track_href.get_text()
             code = track_href.get('data-song')
+
+            if not code or not name:
+                continue
 
             songs.append((name, code))
 
@@ -74,6 +83,7 @@ class MusicCrawler:
         self.load_artists()
 
         for artist in self.artists:
+            print('Getting songs of {}...'.format(artist))
+
             artist_songs = self.get_artist_songs(artist)
             self.save_artist_songs_info(artist, artist_songs)
-            break
