@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 import unicodedata
 
@@ -15,6 +16,7 @@ def clean_name(name):
     name = name.strip()
     name = name.lower()
     name = name.replace(' ', '-')
+    name = name.replace('/', '')
     name = remove_accented_characters(name)
 
     return name
@@ -141,6 +143,7 @@ class MusicDownloader:
 
             song_name, song = self.parse_json_response(json_response)
             songs.append((song_name, song))
+            time.sleep(2)
 
         artist_path = self.data_folder / artist_name
         self.save_songs(songs, artist_path)
@@ -160,4 +163,8 @@ class MusicDownloader:
         self.load_api_key()
 
         for artist in os.listdir(self.data_folder):
+            if artist in succedded_artists:
+                continue
+
+            print('Downloading songs from {}'.format(artist))
             self.download_songs(artist)
