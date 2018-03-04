@@ -143,7 +143,7 @@ class MusicDownloader:
 
             song_name, song = self.parse_json_response(json_response)
             songs.append((song_name, song))
-            time.sleep(2)
+            time.sleep(3)
 
         artist_path = self.data_folder / artist_name
         self.save_songs(songs, artist_path)
@@ -164,6 +164,10 @@ class MusicDownloader:
 
         for artist in os.listdir(self.data_folder):
             if artist in succedded_artists:
+                continue
+
+            artist_path = self.data_folder / artist
+            if not artist_path.is_dir():
                 continue
 
             print('Downloading songs from {}'.format(artist))
