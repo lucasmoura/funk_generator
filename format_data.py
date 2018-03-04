@@ -11,6 +11,11 @@ def create_argparse():
                         type=str,
                         help='Location of the songs files')
 
+    parser.add_argument('-dsp',
+                        '--dataset-save-path',
+                        type=str,
+                        help='Location to save the dataset files')
+
     return parser
 
 
@@ -19,9 +24,10 @@ def main():
     user_args = vars(parser.parse_args())
 
     data_folder = user_args['data_folder']
-    music_dataset = MusicDataset(data_folder)
+    dataset_save_path = user_args['dataset_save_path']
+    music_dataset = MusicDataset(data_folder, dataset_save_path)
 
-    music_dataset.get_songs()
+    music_dataset.create_dataset(validation_percent=0.1, test_percent=0.1)
     music_dataset.display_info()
 
 

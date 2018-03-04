@@ -5,6 +5,8 @@
 set -e
 
 DATA_FOLDER='data'
+DATASET_SAVE_PATH='song_dataset'
 
 python format_data.py \
-    --data-folder=${DATA_FOLDER}
+    --data-folder=${DATA_FOLDER} \
+    --dataset-save-path=${DATASET_SAVE_PATH}
