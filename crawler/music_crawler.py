@@ -163,8 +163,6 @@ class MusicDownloader:
         self.load_api_key()
 
         for artist in os.listdir(self.data_folder):
-            if artist in succedded_artists:
-                continue
 
             artist_path = self.data_folder / artist
             if not artist_path.is_dir():
