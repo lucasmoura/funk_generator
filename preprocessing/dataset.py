@@ -28,6 +28,7 @@ class MusicDataset:
         song_text = re.sub(r"\n", ' <br> ', song_text)
         song_text = re.sub(r'\s{2,}', ' ', song_text)
         song_text = re.sub('<br> <br>', '<br> <par>', song_text)
+        song_text = song_text.lower()
 
         song_text = song_text.split(' ')
 
@@ -71,34 +72,50 @@ class MusicDataset:
 
         print('Loading datasets ...')
         self.all_songs = self.load_dataset('all_songs.pkl')
-        self.train_dataset = self.load_dataset('train.pkl')
-        self.validation_dataset = self.load_dataset('validation.pkl')
-        self.test_dataset = self.load_dataset('test.pkl')
+        self.train_dataset = self.load_dataset('train/raw_train.pkl')
+        self.validation_dataset = self.load_dataset('validation/raw_validation.pkl')
+        self.test_dataset = self.load_dataset('test/raw_test.pkl')
 
         return True
 
-    def save_dataset(self, dataset, dataset_type):
-        dataset_path = self.dataset_save_path / dataset_type
-
+    def save_dataset(self, dataset, dataset_path):
         with dataset_path.open(mode='wb') as dataset_file:
             pickle.dump(dataset, dataset_file)
 
-    def save_datasets(self):
-
+    def create_dirs(self):
         if not self.dataset_save_path.is_dir():
             self.dataset_save_path.mkdir()
 
-        dataset_type = 'all_songs.pkl'
-        self.save_dataset(self.all_songs, dataset_type)
+        train_dataset = self.dataset_save_path / 'train'
+        if not train_dataset.is_dir():
+            train_dataset.mkdir()
 
-        dataset_type = 'train.pkl'
-        self.save_dataset(self.train_dataset, dataset_type)
+        validation_dataset = self.dataset_save_path / 'validation'
+        if not validation_dataset.is_dir():
+            validation_dataset.mkdir()
 
-        dataset_type = 'validation.pkl'
-        self.save_dataset(self.validation_dataset, dataset_type)
+        test_dataset = self.dataset_save_path / 'test'
+        if not test_dataset.is_dir():
+            test_dataset.mkdir()
 
-        dataset_type = 'test.pkl'
-        self.save_dataset(self.test_dataset, dataset_type)
+        return train_dataset, validation_dataset, test_dataset
+
+    def save_datasets(self):
+
+        (train_dataset_path, validation_dataset_path,
+            test_dataset_path) = self.create_dirs()
+
+        save_path = self.dataset_save_path / 'all_songs.pkl'
+        self.save_dataset(self.all_songs, save_path)
+
+        train_dataset_path = train_dataset_path / 'raw_train.pkl'
+        self.save_dataset(self.train_dataset, train_dataset_path)
+
+        validation_dataset_path = validation_dataset_path / 'raw_validation.pkl'
+        self.save_dataset(self.validation_dataset, validation_dataset_path)
+
+        test_dataset_path = test_dataset_path / 'raw_test.pkl'
+        self.save_dataset(self.test_dataset, test_dataset_path)
 
     def split_dataset(self, validation_percent, test_percent):
         total_size = validation_percent + test_percent
