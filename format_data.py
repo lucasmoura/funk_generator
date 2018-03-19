@@ -44,6 +44,7 @@ def full_preprocessing(train, validation, test, data_folder, dataset_save_path):
 
     print('Creating vocabulary ...')
     vocabulary = get_vocabulary(train)
+    print('Vocabulary lenght: {}'.format(len(vocabulary)))
     word2index, index2word = create_word_dictionaties(vocabulary)
 
     index2word_path = data_folder / 'index2word.pkl'
