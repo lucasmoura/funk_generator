@@ -17,7 +17,7 @@ class SongDataset:
 
         sequence_features = {
             'tokens': tf.FixedLenSequenceFeature([], dtype=tf.int64),
-            'labels': tf.FixedLenFeature([], dtype=tf.int64)
+            'labels': tf.FixedLenSequenceFeature([], dtype=tf.int64)
         }
 
         tfrecord_parsed = tf.parse_single_sequence_example(
