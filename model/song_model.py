@@ -37,9 +37,9 @@ class SongLyricsModel:
             try:
 
                 if training:
-                    _, batch_loss, batch_num_words = sess.run(ops)
+                    _, batch_loss = sess.run(ops)
                 else:
-                    batch_loss, batch_num_words = sess.run(ops)
+                    batch_loss = sess.run(ops)
 
                 costs += batch_loss
                 num_iters += 1
@@ -50,12 +50,12 @@ class SongLyricsModel:
     def fit(self, sess):
         for i in range(self.config.num_epochs):
             print('Running epoch: {}'.format(i + 1))
-            ops = [self.train_op, self.train_loss, self.train_num_words]
+            ops = [self.train_op, self.train_loss]
             sess.run(self.train_iterator.initializer)
             train_perplexity = self.run_epoch(sess, ops)
             print('Train perplexity: {:.3f}'.format(train_perplexity))
 
-            ops = [self.validation_loss, self.validation_num_words]
+            ops = self.validation_loss
             sess.run(self.validation_iterator.initializer)
             val_perplexity = self.run_epoch(sess, ops, training=False)
             print('Validation perplexity: {:.3f}'.format(val_perplexity))
@@ -82,7 +82,6 @@ class SongLyricsModel:
         with tf.name_scope('train'):
             train_logits = self.add_logits_op(train_data, train_size)
             self.train_loss = self.add_loss_op(train_logits, train_labels, train_size)
-            self.train_num_words = tf.reduce_sum(train_size)
             self.train_op = self.add_train_op(self.train_loss)
 
         self.config.lstm_output_dropout = 1.0
@@ -90,4 +89,3 @@ class SongLyricsModel:
             validation_logits = self.add_logits_op(validation_data, validation_size, reuse=True)
             self.validation_loss = self.add_loss_op(
                 validation_logits, validation_labels, validation_size)
-            self.validation_num_words = tf.reduce_sum(validation_size)
