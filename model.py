@@ -4,7 +4,7 @@ import os
 import tensorflow as tf
 
 from model.input_pipeline import InputPipeline
-from model.rnn import RecurrentModel, ModelConfig
+from model.rnn import RecurrentModel, RecurrentConfig
 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -101,7 +101,7 @@ def main():
 
     dataset.build_pipeline()
 
-    config = ModelConfig(user_args)
+    config = RecurrentConfig(user_args)
     model = RecurrentModel(dataset, config)
 
     with tf.Session() as sess:

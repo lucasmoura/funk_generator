@@ -1,24 +1,22 @@
 import tensorflow as tf
 
-import numpy as np
+
+from model.song_model import ModelConfig, SongLyricsModel
 
 
-class ModelConfig:
+class RecurrentConfig(ModelConfig):
 
     def __init__(self, model_params):
+        super().__init__(model_params)
 
         self.num_layers = model_params['num_layers']
         self.num_units = model_params['num_units']
-        self.vocab_size = model_params['vocab_size']
-        self.embedding_size = model_params['embedding_size']
+        self.lstm_output_dropout = model_params['lstm_output_dropout']
         self.min_val = model_params['min_val']
         self.max_val = model_params['max_val']
-        self.lstm_output_dropout = model_params['lstm_output_dropout']
-        self.learning_rate = model_params['learning_rate']
-        self.num_epochs = model_params['num_epochs']
 
 
-class RecurrentModel:
+class RecurrentModel(SongLyricsModel):
 
     def __init__(self, dataset, config):
         self.dataset = dataset
@@ -102,64 +100,3 @@ class RecurrentModel:
         optimizer_op = optimizer.minimize(loss)
 
         return optimizer_op
-
-    def run_epoch(self, sess, ops, training=True):
-        costs, size = 0, 0
-        while True:
-            try:
-
-                if training:
-                    _, batch_loss, batch_num_words = sess.run(ops)
-                else:
-                    batch_loss, batch_num_words = sess.run(ops)
-
-                costs += batch_loss
-                size += batch_num_words
-
-            except tf.errors.OutOfRangeError:
-                return np.exp(costs / size)
-
-    def fit(self, sess):
-        for i in range(self.config.num_epochs):
-            print('Running epoch: {}'.format(i + 1))
-            ops = [self.train_op, self.train_loss, self.train_num_words]
-            sess.run(self.train_iterator.initializer)
-            train_perplexity = self.run_epoch(sess, ops)
-            print('Train perplexity: {}'.format(train_perplexity))
-
-            ops = [self.validation_loss, self.validation_num_words]
-            sess.run(self.validation_iterator.initializer)
-            val_perplexity = self.run_epoch(sess, ops, training=False)
-            print('Validation perplexity: {}'.format(val_perplexity))
-
-            print()
-
-    def build_graph(self):
-
-        with tf.name_scope('iterator'):
-            self.train_iterator = self.dataset.train_iterator
-            self.validation_iterator = self.dataset.validation_iterator
-            self.test_iterator = self.dataset.test_iterator
-
-        with tf.name_scope('train_data'):
-            train_data, train_labels, train_size = self.train_iterator.get_next()
-
-        with tf.name_scope('validation_data'):
-            (validation_data, validation_labels,
-                validation_size) = self.validation_iterator.get_next()
-
-        with tf.name_scope('test_data'):
-            test_data, test_labels, test_size = self.test_iterator.get_next()
-
-        with tf.name_scope('train'):
-            train_logits = self.add_logits_op(train_data, train_size)
-            self.train_loss = self.add_loss_op(train_logits, train_labels, train_size)
-            self.train_num_words = tf.reduce_sum(train_size)
-            self.train_op = self.add_train_op(self.train_loss)
-
-        self.config.lstm_output_dropout = 1.0
-        with tf.name_scope('validation'):
-            validation_logits = self.add_logits_op(validation_data, validation_size, reuse=True)
-            self.validation_loss = self.add_loss_op(
-                validation_logits, validation_labels, validation_size)
-            self.validation_num_words = tf.reduce_sum(validation_size)
