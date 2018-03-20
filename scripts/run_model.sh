@@ -8,11 +8,14 @@ TRAIN_FILE='data/song_dataset/train/train.tfrecord'
 VALIDATION_FILE='data/song_dataset/validation/validation.tfrecord'
 TEST_FILE='data/song_dataset/test/test.tfrecord'
 
+INDEX2WORD_PATH='data/song_dataset/index2word.pkl'
+WORD2INDEX_PATH='data/song_dataset/word2index.pkl'
+
 LEARNING_RATE=0.0001
-NUM_EPOCHS=2
+NUM_EPOCHS=10
 BATCH_SIZE=128
 
-NUM_LAYERS=1
+NUM_LAYERS=2
 NUM_UNITS=128
 VOCAB_SIZE=6448
 EMBEDDING_SIZE=50
@@ -25,6 +28,8 @@ python model.py \
   --train-file=${TRAIN_FILE} \
   --validation-file=${VALIDATION_FILE} \
   --test-file=${TEST_FILE} \
+  --index2word-path=${INDEX2WORD_PATH} \
+  --word2index-path=${WORD2INDEX_PATH} \
   --num-epochs=${NUM_EPOCHS} \
   --batch-size=${BATCH_SIZE} \
   --learning-rate=${LEARNING_RATE} \

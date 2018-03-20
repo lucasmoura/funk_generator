@@ -18,10 +18,6 @@ class RecurrentConfig(ModelConfig):
 
 class RecurrentModel(SongLyricsModel):
 
-    def __init__(self, dataset, config):
-        self.dataset = dataset
-        self.config = config
-
     def add_embeddings_op(self, data_batch):
         with tf.name_scope('embeddings'):
             embeddings = tf.get_variable(
@@ -44,22 +40,22 @@ class RecurrentModel(SongLyricsModel):
             with tf.name_scope('recurrent_layer'):
 
                 def make_cell():
-                    cell = tf.nn.rnn_cell.LSTMCell(self.config.num_units)
+                    lstm_cell = tf.nn.rnn_cell.LSTMCell(self.config.num_units)
                     drop_cell = tf.nn.rnn_cell.DropoutWrapper(
-                        cell, output_keep_prob=self.config.lstm_output_dropout)
+                        lstm_cell, output_keep_prob=self.config.lstm_output_dropout)
                     return drop_cell
 
-                multi_cell = tf.nn.rnn_cell.MultiRNNCell(
+                self.cell = tf.nn.rnn_cell.MultiRNNCell(
                     [make_cell() for _ in range(self.config.num_layers)])
 
-                initial_state = multi_cell.zero_state(
+                self.initial_state = self.cell.zero_state(
                     tf.shape(data_batch)[0], tf.float32)
 
-                outputs, _ = tf.nn.dynamic_rnn(
-                    multi_cell,
+                outputs, self.final_state = tf.nn.dynamic_rnn(
+                    self.cell,
                     data_embeddings,
                     sequence_length=size_batch,
-                    initial_state=initial_state,
+                    initial_state=self.initial_state,
                     dtype=tf.float32
                 )
 

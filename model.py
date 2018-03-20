@@ -28,6 +28,16 @@ def create_argparse():
                                  type=str,
                                  help='Location of the test file')
 
+    argument_parser.add_argument('-i2w',
+                                 '--index2word-path',
+                                 type=str,
+                                 help='Location of the index2word dict')
+
+    argument_parser.add_argument('-w2i',
+                                 '--word2index-path',
+                                 type=str,
+                                 help='Location of word2index dict')
+
     argument_parser.add_argument('-ne',
                                  '--num-epochs',
                                  type=int,

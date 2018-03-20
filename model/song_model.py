@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 import tensorflow as tf
 
@@ -9,6 +11,8 @@ class ModelConfig:
         self.embedding_size = model_params['embedding_size']
         self.learning_rate = model_params['learning_rate']
         self.num_epochs = model_params['num_epochs']
+        self.index2word_path = model_params['index2word_path']
+        self.word2index_path = model_params['word2index_path']
 
 
 class SongLyricsModel:
@@ -16,6 +20,13 @@ class SongLyricsModel:
     def __init__(self, dataset, config):
         self.dataset = dataset
         self.config = config
+
+        self.index2word = self.load_dict(self.config.index2word_path)
+        self.word2index = self.load_dict(self.config.word2index_path)
+
+    def load_dict(self, path):
+        with open(path, 'rb') as f:
+            return pickle.load(f)
 
     def add_embedding_op(self, data_batch):
         raise NotImplementedError
@@ -60,7 +71,44 @@ class SongLyricsModel:
             val_perplexity = self.run_epoch(sess, ops, training=False)
             print('Validation perplexity: {:.3f}'.format(val_perplexity))
 
+            print('Song generated for epoch: {}'.format(i + 1))
+            print(self.generate(sess))
+
             print()
+
+    def generate(self, sess, num_out=200):
+        """
+        Generate a sequence of text from the trained model.
+        @param num_out: The length of the sequence to generate, in num words.
+        @param prime: The priming sequence for generation. If None, pick a random word from the
+                      vocabulary as prime.
+        @param sample: Whether to probabalistically sample the next word, rather than take the word
+                       of max probability.
+        """
+        state = sess.run(self.cell.zero_state(1, tf.float32))
+        word = self.word2index['<begin>']
+
+        song = []
+
+        for i in range(num_out):
+            input_word_id = np.array([[word]])
+            feed_dict = {self.data_placeholder: input_word_id, self.initial_state: state}
+            probs, state = sess.run(
+                [self.generate_predictions, self.final_state], feed_dict=feed_dict)
+            import ipdb; ipdb.set_trace()
+            probs = probs[0]
+
+
+            generated_word_id = np.argmax(probs)
+            word = generated_word_id
+
+            generated_word = self.index2word[generated_word_id]
+            song.append(generated_word)
+
+            if generated_word == '<end>':
+                break
+
+        return song
 
     def build_graph(self):
 
@@ -89,3 +137,10 @@ class SongLyricsModel:
             validation_logits = self.add_logits_op(validation_data, validation_size, reuse=True)
             self.validation_loss = self.add_loss_op(
                 validation_logits, validation_labels, validation_size)
+
+        with tf.name_scope('generate'):
+            self.data_placeholder = tf.placeholder(tf.int32, [None, 1])
+            generate_size = np.array([1])
+            generate_logits = self.add_logits_op(
+                self.data_placeholder, generate_size, reuse=True)
+            self.generate_predictions = tf.nn.softmax(generate_logits)
