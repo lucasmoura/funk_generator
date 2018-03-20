@@ -23,6 +23,9 @@ class MusicDataset:
         song_text = re.sub(r",", " , ", song_text)
         song_text = re.sub(r"!", " ! ", song_text)
         song_text = re.sub(r"\?", " ? ", song_text)
+        song_text = re.sub(r"\)", " \) ", song_text)
+        song_text = re.sub(r"\(", " \( ", song_text)
+        song_text = re.sub(r":", " : ", song_text)
 
         song_text = '<begin> ' + song_text + ' <end>'
         song_text = re.sub(r"\n", ' <br> ', song_text)
@@ -37,13 +40,13 @@ class MusicDataset:
     def get_songs(self):
         self.all_songs = []
 
-        for artist in os.listdir(self.data_folder):
+        for artist in os.listdir(str(self.data_folder)):
             artist_path = self.data_folder / artist
 
             if not artist_path.is_dir():
                 continue
 
-            for song in os.listdir(artist_path):
+            for song in os.listdir(str(artist_path)):
                 if song == 'song_codes.txt' or song == 'song_names.txt':
                     continue
 
