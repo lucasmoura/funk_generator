@@ -49,6 +49,8 @@ def full_preprocessing(train, validation, test, data_folder, dataset_save_path):
 
     index2word_path = data_folder / dataset_save_path / 'index2word.pkl'
     save(index2word, index2word_path)
+    word2index_path = data_folder / dataset_save_path / 'word2index.pkl'
+    save(word2index, word2index_path)
 
     print('Replacing unknown words ...')
     replace_unk_words(train, word2index)
