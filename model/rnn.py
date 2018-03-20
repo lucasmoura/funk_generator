@@ -52,10 +52,14 @@ class RecurrentModel(SongLyricsModel):
                 multi_cell = tf.nn.rnn_cell.MultiRNNCell(
                     [make_cell() for _ in range(self.config.num_layers)])
 
+                initial_state = multi_cell.zero_state(
+                    tf.shape(data_batch)[0], tf.float32)
+
                 outputs, _ = tf.nn.dynamic_rnn(
                     multi_cell,
                     data_embeddings,
                     sequence_length=size_batch,
+                    initial_state=initial_state,
                     dtype=tf.float32
                 )
 
