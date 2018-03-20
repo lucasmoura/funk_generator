@@ -47,7 +47,7 @@ def full_preprocessing(train, validation, test, data_folder, dataset_save_path):
     print('Vocabulary lenght: {}'.format(len(vocabulary)))
     word2index, index2word = create_word_dictionaties(vocabulary)
 
-    index2word_path = data_folder / 'index2word.pkl'
+    index2word_path = data_folder / dataset_save_path / 'index2word.pkl'
     save(index2word, index2word_path)
 
     print('Replacing unknown words ...')
