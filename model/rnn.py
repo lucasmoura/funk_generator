@@ -42,15 +42,18 @@ class RecurrentModel(SongLyricsModel):
             data_embeddings = self.add_embeddings_op(data_batch)
 
             with tf.name_scope('recurrent_layer'):
-                cell = tf.nn.rnn_cell.LSTMCell(self.config.num_units)
-                drop_cell = tf.nn.rnn_cell.DropoutWrapper(
-                    cell, output_keep_prob=self.config.lstm_output_dropout)
 
-                lstm_layers = tf.nn.rnn_cell.MultiRNNCell(
-                    [drop_cell] * self.config.num_layers)
+                def make_cell():
+                    cell = tf.nn.rnn_cell.LSTMCell(self.config.num_units)
+                    drop_cell = tf.nn.rnn_cell.DropoutWrapper(
+                        cell, output_keep_prob=self.config.lstm_output_dropout)
+                    return drop_cell
+
+                multi_cell = tf.nn.rnn_cell.MultiRNNCell(
+                    [make_cell() for _ in range(self.config.num_layers)])
 
                 outputs, _ = tf.nn.dynamic_rnn(
-                    lstm_layers,
+                    multi_cell,
                     data_embeddings,
                     sequence_length=size_batch,
                     dtype=tf.float32
