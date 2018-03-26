@@ -39,11 +39,13 @@ def create_tfrecord(dataset, dataset_type, dataset_save_path):
     sentence_tfrecord.parse_sentences()
 
 
-def full_preprocessing(train, validation, test, data_folder, dataset_save_path):
+def full_preprocessing(train, validation, test, data_folder,
+                       dataset_save_path, min_frequency):
+
     data_folder = Path(data_folder)
 
     print('Creating vocabulary ...')
-    vocabulary = get_vocabulary(train)
+    vocabulary = get_vocabulary(train, min_frequency)
     print('Vocabulary lenght: {}'.format(len(vocabulary)))
     word2index, index2word = create_word_dictionaties(vocabulary)
 
@@ -102,6 +104,11 @@ def create_argparse():
                         type=str,
                         help='Location to save the dataset files')
 
+    parser.add_argument('-mf',
+                        '--min-frequency',
+                        type=int,
+                        help='Minimum word frequency required for a word to a part of the vocabulary')  # noqa
+
     return parser
 
 
@@ -119,13 +126,15 @@ def main():
     train_dataset = music_dataset.train_dataset
     validation_dataset = music_dataset.validation_dataset
     test_dataset = music_dataset.test_dataset
+    min_frequency = user_args['min_frequency']
 
     full_preprocessing(
         train=train_dataset,
         validation=validation_dataset,
         test=test_dataset,
         data_folder=data_folder,
-        dataset_save_path=dataset_save_path)
+        dataset_save_path=dataset_save_path,
+        min_frequency=min_frequency)
 
 
 if __name__ == '__main__':

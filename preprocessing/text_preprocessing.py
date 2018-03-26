@@ -3,7 +3,7 @@ import pickle
 from tensorflow.contrib import learn
 
 
-def get_vocabulary(text_array):
+def get_vocabulary(text_array, min_frequency):
     def tokenizer_fn(iterator):
         return (x.split(' ') for x in iterator)
 
@@ -11,7 +11,7 @@ def get_vocabulary(text_array):
     text_array = [' '.join(text) for text in text_array]
 
     vocabulary_processor = learn.preprocessing.VocabularyProcessor(
-        max_size, tokenizer_fn=tokenizer_fn, min_frequency=10)
+        max_size, tokenizer_fn=tokenizer_fn, min_frequency=min_frequency)
 
     vocabulary_processor.fit(text_array)
 
