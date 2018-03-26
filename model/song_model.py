@@ -43,19 +43,29 @@ class SongLyricsModel:
     def run_epoch(self, sess, ops, training=True):
         costs = 0
         num_iters = 0
+        initial = True
+        state = None
 
         while True:
             try:
 
                 if training:
                     feed_dict = self.create_train_feed_dict()
-                    _, batch_loss = sess.run(ops, feed_dict=feed_dict)
+                    if not initial:
+                        feed_dict[self.initial_state] = state
+
+                    _, batch_loss, state = sess.run(ops, feed_dict=feed_dict)
                 else:
                     feed_dict = self.create_validation_feed_dict()
-                    batch_loss = sess.run(ops, feed_dict=feed_dict)
+
+                    if not initial:
+                        feed_dict[self.initial_state] = state
+
+                    batch_loss, state = sess.run(ops, feed_dict=feed_dict)
 
                 costs += batch_loss
                 num_iters += 1
+                initial = False
 
             except tf.errors.OutOfRangeError:
                 return np.exp(costs / num_iters)
@@ -66,12 +76,12 @@ class SongLyricsModel:
 
         for i in range(self.config.num_epochs):
             print('Running epoch: {}'.format(i + 1))
-            ops = [self.train_op, self.train_loss]
+            ops = [self.train_op, self.train_loss, self.train_state]
             sess.run(self.train_iterator.initializer)
             train_perplexity = self.run_epoch(sess, ops)
             print('Train perplexity: {:.3f}'.format(train_perplexity))
 
-            ops = self.validation_loss
+            ops = [self.validation_loss, self.validation_state]
             sess.run(self.validation_iterator.initializer)
             val_perplexity = self.run_epoch(sess, ops, training=False)
             print('Validation perplexity: {:.3f}'.format(val_perplexity))
@@ -97,18 +107,21 @@ class SongLyricsModel:
             input_word_id = np.array([[word]])
             feed_dict = self.create_generate_feed_dict(
                 data=input_word_id,
-                temperature=0.7,
+                temperature=0.5,
                 state=state)
             probs, state = sess.run(
-                [self.generate_predictions, self.final_state], feed_dict=feed_dict)
+                [self.generate_predictions, self.generate_state], feed_dict=feed_dict)
 
             probs = probs[0].reshape(-1)
 
-            generated_word_id = np.random.choice(
-                np.arange(len(probs)), p=probs)
-            word = generated_word_id
+            while True:
+                generated_word_id = np.random.choice(
+                    np.arange(len(probs)), p=probs)
+                word = generated_word_id
+                generated_word = self.index2word.get(generated_word_id, 1)
 
-            generated_word = self.index2word[generated_word_id]
+                if generated_word != '<UNK>':
+                    break
 
             if generated_word == '<br>':
                 generated_word = '\n'
@@ -142,19 +155,20 @@ class SongLyricsModel:
             test_data, test_labels, test_size = self.test_iterator.get_next()
 
         with tf.name_scope('train'):
-            train_logits = self.add_logits_op(train_data, train_size)
+            train_logits, self.train_state = self.add_logits_op(train_data, train_size)
             self.train_loss = self.add_loss_op(train_logits, train_labels, train_size)
             train_l2_loss = self.add_l2_regularizer_op(self.train_loss)
             self.train_op = self.add_train_op(train_l2_loss)
 
         with tf.name_scope('validation'):
-            validation_logits = self.add_logits_op(validation_data, validation_size, reuse=True)
+            validation_logits, self.validation_state = self.add_logits_op(
+                validation_data, validation_size, reuse=True)
             self.validation_loss = self.add_loss_op(
                 validation_logits, validation_labels, validation_size)
 
         with tf.name_scope('generate'):
             generate_size = np.array([1])
-            generate_logits = self.add_logits_op(
+            generate_logits, self.generate_state = self.add_logits_op(
                 self.data_placeholder, generate_size, reuse=True)
 
             temperature_logits = tf.div(generate_logits, self.temperature_placeholder)

@@ -6,7 +6,7 @@ from preprocessing.dataset import MusicDataset
 from preprocessing.tfrecord import SentenceTFRecord
 from preprocessing.text_preprocessing import (get_vocabulary, create_word_dictionaties,
                                               save, replace_unk_words, replace_words_with_ids,
-                                              create_labels, get_sizes_list)
+                                              create_labels, get_sizes_list, create_chunks)
 
 
 DATA = 0
@@ -63,6 +63,11 @@ def full_preprocessing(train, validation, test, data_folder,
     train = replace_words_with_ids(train, word2index)
     validation = replace_words_with_ids(validation, word2index)
     test = replace_words_with_ids(test, word2index)
+
+    print('Creating chunks ...')
+    train = create_chunks(train, chunk_max_size=35)
+    validation = create_chunks(validation, chunk_max_size=35)
+    test = create_chunks(test, chunk_max_size=35)
 
     print('Creating labels ...')
     train, train_labels = create_labels(train)

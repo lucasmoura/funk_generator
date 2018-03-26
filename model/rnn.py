@@ -103,7 +103,7 @@ class RecurrentModel(SongLyricsModel):
                 self.initial_state = self.cell.zero_state(
                     tf.shape(data_batch)[0], tf.float32)
 
-                outputs, self.final_state = tf.nn.dynamic_rnn(
+                outputs, final_state = tf.nn.dynamic_rnn(
                     self.cell,
                     data_embeddings,
                     sequence_length=size_batch,
@@ -129,7 +129,7 @@ class RecurrentModel(SongLyricsModel):
                 logits = tf.reshape(
                     flat_logits, [batch_size, max_len, self.config.vocab_size])
 
-            return logits
+            return logits, final_state
 
     def add_loss_op(self, logits, labels_batch, size_batch):
         with tf.name_scope('loss'):

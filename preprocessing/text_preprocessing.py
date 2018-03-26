@@ -54,6 +54,17 @@ def get_sizes_list(dataset):
     return [len(data) for data in dataset]
 
 
+def create_chunks(dataset, chunk_max_size):
+    chunks_dataset = []
+
+    for song in dataset:
+        chunks = [song[x:x + chunk_max_size]
+                  for x in range(0, len(song), chunk_max_size)]
+        chunks_dataset.extend(chunks)
+
+    return chunks_dataset
+
+
 def create_labels(dataset):
     new_dataset = []
     labels = []
