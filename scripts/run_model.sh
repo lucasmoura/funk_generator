@@ -11,17 +11,21 @@ TEST_FILE='data/song_dataset/test/test.tfrecord'
 INDEX2WORD_PATH='data/song_dataset/index2word.pkl'
 WORD2INDEX_PATH='data/song_dataset/word2index.pkl'
 
-LEARNING_RATE=0.0001
-NUM_EPOCHS=10
-BATCH_SIZE=128
+LEARNING_RATE=0.001
+NUM_EPOCHS=100
+BATCH_SIZE=32
 
-NUM_LAYERS=2
+NUM_LAYERS=3
 NUM_UNITS=128
-VOCAB_SIZE=6448
-EMBEDDING_SIZE=50
+VOCAB_SIZE=6231
+EMBEDDING_SIZE=128
 MIN_VAL=-1
 MAX_VAL=1
+
+EMBEDDING_DROPOUT=0.5
 LSTM_OUTPUT_DROPOUT=0.5
+LSTM_STATE_DROPOUT=0.5
+WEIGHT_DECAY=0.0003
 
 
 python model.py \
@@ -37,6 +41,9 @@ python model.py \
   --num-units=${NUM_UNITS} \
   --vocab-size=${VOCAB_SIZE} \
   --embedding-size=${EMBEDDING_SIZE} \
+  --embedding-dropout=${EMBEDDING_DROPOUT} \
   --lstm-output-dropout=${LSTM_OUTPUT_DROPOUT} \
+  --lstm-state-dropout=${LSTM_STATE_DROPOUT} \
+  --weight-decay=${WEIGHT_DECAY} \
   --min-val=${MIN_VAL} \
   --max-val=${MAX_VAL}

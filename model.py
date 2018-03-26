@@ -73,10 +73,25 @@ def create_argparse():
                                  type=int,
                                  help='Dimension of the embedding matrix')
 
+    argument_parser.add_argument('-ed',
+                                 '--embedding-dropout',
+                                 type=float,
+                                 help='Embedding dropout')
+
     argument_parser.add_argument('-lod',
                                  '--lstm-output-dropout',
                                  type=float,
                                  help='LSTM output dropout')
+
+    argument_parser.add_argument('-lsd',
+                                 '--lstm-state-dropout',
+                                 type=float,
+                                 help='LSTM state dropout')
+
+    argument_parser.add_argument('-wd',
+                                 '--weight-decay',
+                                 type=float,
+                                 help='Weight decay')
 
     argument_parser.add_argument('-minv',
                                  '--min-val',

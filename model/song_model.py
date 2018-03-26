@@ -48,9 +48,11 @@ class SongLyricsModel:
             try:
 
                 if training:
-                    _, batch_loss = sess.run(ops)
+                    feed_dict = self.create_train_feed_dict()
+                    _, batch_loss = sess.run(ops, feed_dict=feed_dict)
                 else:
-                    batch_loss = sess.run(ops)
+                    feed_dict = self.create_validation_feed_dict()
+                    batch_loss = sess.run(ops, feed_dict=feed_dict)
 
                 costs += batch_loss
                 num_iters += 1
@@ -59,6 +61,9 @@ class SongLyricsModel:
                 return np.exp(costs / num_iters)
 
     def fit(self, sess):
+        best_perplexity = 10000000
+        saver = tf.train.Saver()
+
         for i in range(self.config.num_epochs):
             print('Running epoch: {}'.format(i + 1))
             ops = [self.train_op, self.train_loss]
@@ -71,20 +76,18 @@ class SongLyricsModel:
             val_perplexity = self.run_epoch(sess, ops, training=False)
             print('Validation perplexity: {:.3f}'.format(val_perplexity))
 
+            if val_perplexity < best_perplexity:
+                best_perplexity = val_perplexity
+                print('New best perplexity found !  {:.3f}'.format(best_perplexity))
+
+                saver.save(sess, 'best_model/song_model.ckpt')
+
             print('Song generated for epoch: {}'.format(i + 1))
-            print(self.generate(sess))
+            print(' '.join(self.generate(sess)))
 
             print()
 
     def generate(self, sess, num_out=200):
-        """
-        Generate a sequence of text from the trained model.
-        @param num_out: The length of the sequence to generate, in num words.
-        @param prime: The priming sequence for generation. If None, pick a random word from the
-                      vocabulary as prime.
-        @param sample: Whether to probabalistically sample the next word, rather than take the word
-                       of max probability.
-        """
         state = sess.run(self.cell.zero_state(1, tf.float32))
         word = self.word2index['<begin>']
 
@@ -92,25 +95,36 @@ class SongLyricsModel:
 
         for i in range(num_out):
             input_word_id = np.array([[word]])
-            feed_dict = {self.data_placeholder: input_word_id, self.initial_state: state}
+            feed_dict = self.create_generate_feed_dict(
+                data=input_word_id,
+                temperature=0.7,
+                state=state)
             probs, state = sess.run(
                 [self.generate_predictions, self.final_state], feed_dict=feed_dict)
-            import ipdb; ipdb.set_trace()
-            probs = probs[0]
 
+            probs = probs[0].reshape(-1)
 
-            generated_word_id = np.argmax(probs)
+            generated_word_id = np.random.choice(
+                np.arange(len(probs)), p=probs)
             word = generated_word_id
 
             generated_word = self.index2word[generated_word_id]
-            song.append(generated_word)
+
+            if generated_word == '<br>':
+                generated_word = '\n'
+            elif generated_word == '<par>':
+                generated_word = '\n\n'
 
             if generated_word == '<end>':
                 break
 
+            song.append(generated_word)
+
         return song
 
     def build_graph(self):
+        with tf.name_scope('placeholders'):
+            self.add_placeholders_op()
 
         with tf.name_scope('iterator'):
             self.train_iterator = self.dataset.train_iterator
@@ -130,17 +144,18 @@ class SongLyricsModel:
         with tf.name_scope('train'):
             train_logits = self.add_logits_op(train_data, train_size)
             self.train_loss = self.add_loss_op(train_logits, train_labels, train_size)
-            self.train_op = self.add_train_op(self.train_loss)
+            train_l2_loss = self.add_l2_regularizer_op(self.train_loss)
+            self.train_op = self.add_train_op(train_l2_loss)
 
-        self.config.lstm_output_dropout = 1.0
         with tf.name_scope('validation'):
             validation_logits = self.add_logits_op(validation_data, validation_size, reuse=True)
             self.validation_loss = self.add_loss_op(
                 validation_logits, validation_labels, validation_size)
 
         with tf.name_scope('generate'):
-            self.data_placeholder = tf.placeholder(tf.int32, [None, 1])
             generate_size = np.array([1])
             generate_logits = self.add_logits_op(
                 self.data_placeholder, generate_size, reuse=True)
-            self.generate_predictions = tf.nn.softmax(generate_logits)
+
+            temperature_logits = tf.div(generate_logits, self.temperature_placeholder)
+            self.generate_predictions = tf.nn.softmax(temperature_logits)
