@@ -1,4 +1,6 @@
+import contextlib
 import pickle
+import os
 
 import numpy as np
 import tensorflow as tf
@@ -13,6 +15,8 @@ class ModelConfig:
         self.num_epochs = model_params['num_epochs']
         self.index2word_path = model_params['index2word_path']
         self.word2index_path = model_params['word2index_path']
+        self.checkpoint_path = model_params['checkpoint_path']
+        self.use_checkpoint = model_params['use_checkpoint']
 
 
 class SongLyricsModel:
@@ -40,7 +44,27 @@ class SongLyricsModel:
     def add_train_op(self, loss):
         raise NotImplementedError
 
-    def run_epoch(self, sess, ops, training=True):
+    @contextlib.contextmanager
+    def initialize_session(self):
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+
+        checkpoint = tf.train.latest_checkpoint(self.config.checkpoint_path)
+        saver = tf.train.Saver()
+
+        with tf.Session(config=config) as sess:
+            if self.config.use_checkpoint:
+                print('Load checkpoint: {}'.format(checkpoint))
+                saver.restore(sess, checkpoint)
+            else:
+                print('Creating new model')
+                os.makedirs(self.config.checkpoint_path)
+
+                sess.run(tf.global_variables_initializer())
+
+            yield (sess, saver)
+
+    def run_epoch(self, sess, ops, feed_dict, training=True):
         costs = 0
         num_iters = 0
         initial = True
@@ -48,20 +72,10 @@ class SongLyricsModel:
 
         while True:
             try:
+                if not initial:
+                    feed_dict[self.initial_state] = state
 
-                if training:
-                    feed_dict = self.create_train_feed_dict()
-                    if not initial:
-                        feed_dict[self.initial_state] = state
-
-                    _, batch_loss, state = sess.run(ops, feed_dict=feed_dict)
-                else:
-                    feed_dict = self.create_validation_feed_dict()
-
-                    if not initial:
-                        feed_dict[self.initial_state] = state
-
-                    batch_loss, state = sess.run(ops, feed_dict=feed_dict)
+                _, batch_loss, state = sess.run(ops, feed_dict=feed_dict)
 
                 costs += batch_loss
                 num_iters += 1
@@ -72,30 +86,33 @@ class SongLyricsModel:
 
     def fit(self, sess):
         best_perplexity = 10000000
-        saver = tf.train.Saver()
+        train_feed_dict = self.create_train_feed_dict()
+        validation_feed_dict = self.create_validation_feed_dict()
 
-        for i in range(self.config.num_epochs):
-            print('Running epoch: {}'.format(i + 1))
-            ops = [self.train_op, self.train_loss, self.train_state]
-            sess.run(self.train_iterator.initializer)
-            train_perplexity = self.run_epoch(sess, ops)
-            print('Train perplexity: {:.3f}'.format(train_perplexity))
+        with self.initialize_session() as (sess, saver):
+            for i in range(self.config.num_epochs):
+                print('Running epoch: {}'.format(i + 1))
+                ops = [self.train_op, self.train_loss, self.train_state]
+                sess.run(self.train_iterator.initializer)
+                train_perplexity = self.run_epoch(sess, ops, train_feed_dict)
+                print('Train perplexity: {:.3f}'.format(train_perplexity))
 
-            ops = [self.validation_loss, self.validation_state]
-            sess.run(self.validation_iterator.initializer)
-            val_perplexity = self.run_epoch(sess, ops, training=False)
-            print('Validation perplexity: {:.3f}'.format(val_perplexity))
+                ops = [self.no_op, self.validation_loss, self.validation_state]
+                sess.run(self.validation_iterator.initializer)
+                val_perplexity = self.run_epoch(sess, ops, validation_feed_dict)
+                print('Validation perplexity: {:.3f}'.format(val_perplexity))
 
-            if val_perplexity < best_perplexity:
-                best_perplexity = val_perplexity
-                print('New best perplexity found !  {:.3f}'.format(best_perplexity))
+                if val_perplexity < best_perplexity:
+                    best_perplexity = val_perplexity
+                    print('New best perplexity found !  {:.3f}'.format(best_perplexity))
 
-                saver.save(sess, 'best_model/song_model.ckpt')
+                    saver.save(
+                        sess, os.path.join(self.config.checkpoint_path, 'song_model.ckpt'))
 
-            print('Song generated for epoch: {}'.format(i + 1))
-            print(' '.join(self.generate(sess)))
+                print('Song generated for epoch: {}'.format(i + 1))
+                print(' '.join(self.generate(sess)))
 
-            print()
+                print()
 
     def generate(self, sess, num_out=200):
         state = sess.run(self.cell.zero_state(1, tf.float32))
@@ -107,7 +124,7 @@ class SongLyricsModel:
             input_word_id = np.array([[word]])
             feed_dict = self.create_generate_feed_dict(
                 data=input_word_id,
-                temperature=0.5,
+                temperature=0.7,
                 state=state)
             probs, state = sess.run(
                 [self.generate_predictions, self.generate_state], feed_dict=feed_dict)
@@ -131,11 +148,14 @@ class SongLyricsModel:
             if generated_word == '<end>':
                 break
 
-            song.append(generated_word)
+            song.append(str(generated_word))
 
         return song
 
     def build_graph(self):
+        with tf.name_scope('noop'):
+            self.no_op = tf.no_op()
+
         with tf.name_scope('placeholders'):
             self.add_placeholders_op()
 

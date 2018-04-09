@@ -11,6 +11,9 @@ TEST_FILE='data/song_dataset/test/test.tfrecord'
 INDEX2WORD_PATH='data/song_dataset/index2word.pkl'
 WORD2INDEX_PATH='data/song_dataset/word2index.pkl'
 
+CHECKPOINT_PATH='checkpoint'
+USE_CHECKPOINT=0
+
 LEARNING_RATE=0.001
 NUM_EPOCHS=100
 BATCH_SIZE=32
@@ -27,11 +30,17 @@ LSTM_OUTPUT_DROPOUT=0.5
 LSTM_STATE_DROPOUT=0.5
 WEIGHT_DECAY=0.0003
 
+NUM_BUCKETS=30
+BUCKET_WIDTH=30
+PREFETCH_BUFFER=8
+
 
 python model.py \
   --train-file=${TRAIN_FILE} \
   --validation-file=${VALIDATION_FILE} \
   --test-file=${TEST_FILE} \
+  --checkpoint-path=${CHECKPOINT_PATH} \
+  --use-checkpoint=${USE_CHECKPOINT} \
   --index2word-path=${INDEX2WORD_PATH} \
   --word2index-path=${WORD2INDEX_PATH} \
   --num-epochs=${NUM_EPOCHS} \
@@ -46,4 +55,7 @@ python model.py \
   --lstm-state-dropout=${LSTM_STATE_DROPOUT} \
   --weight-decay=${WEIGHT_DECAY} \
   --min-val=${MIN_VAL} \
-  --max-val=${MAX_VAL}
+  --max-val=${MAX_VAL} \
+  --num-buckets=${NUM_BUCKETS} \
+  --bucket-width=${BUCKET_WIDTH} \
+  --prefetch-buffer=${PREFETCH_BUFFER}

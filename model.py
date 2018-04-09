@@ -28,6 +28,16 @@ def create_argparse():
                                  type=str,
                                  help='Location of the test file')
 
+    argument_parser.add_argument('-chp',
+                                 '--checkpoint-path',
+                                 type=str,
+                                 help="The path to save model's checkpoint")
+
+    argument_parser.add_argument('-uch',
+                                 '--use-checkpoint',
+                                 type=int,
+                                 help='If the model checkpoint should be loaded')
+
     argument_parser.add_argument('-i2w',
                                  '--index2word-path',
                                  type=str,
@@ -103,6 +113,21 @@ def create_argparse():
                                  type=int,
                                  help='Max value to use when initializing weights')
 
+    argument_parser.add_argument('-nbc',
+                                 '--num-buckets',
+                                 type=int,
+                                 help='Number of buckets to use')
+
+    argument_parser.add_argument('-bcw',
+                                 '--bucket-width',
+                                 type=int,
+                                 help='Number of elements allowed in bucket')
+
+    argument_parser.add_argument('-pb',
+                                 '--prefetch-buffer',
+                                 type=int,
+                                 help='Size of prefetch buffer')
+
     return argument_parser
 
 
@@ -114,6 +139,9 @@ def main():
     validation_file = user_args['validation_file']
     test_file = user_args['test_file']
     batch_size = user_args['batch_size']
+    num_buckets = user_args['num_buckets']
+    bucket_width = user_args['bucket_width']
+    prefetch_buffer = user_args['prefetch_buffer']
 
     dataset = InputPipeline(
         train_files=train_file,
@@ -121,8 +149,9 @@ def main():
         test_files=test_file,
         batch_size=batch_size,
         perform_shuffle=True,
-        bucket_width=30,
-        num_buckets=30)
+        bucket_width=bucket_width,
+        num_buckets=num_buckets,
+        prefetch_buffer=prefetch_buffer)
 
     dataset.build_pipeline()
 
@@ -131,9 +160,6 @@ def main():
 
     with tf.Session() as sess:
         model.build_graph()
-
-        init = tf.global_variables_initializer()
-        init.run()
 
         model.fit(sess)
 

@@ -3,12 +3,14 @@ import tensorflow as tf
 
 class SongDataset:
 
-    def __init__(self, data, batch_size, perform_shuffle, bucket_width, num_buckets):
+    def __init__(self, data, batch_size, perform_shuffle,
+                 bucket_width, num_buckets, prefetch_buffer):
         self.data = data
         self.batch_size = batch_size
         self.perform_shuffle = perform_shuffle
         self.bucket_width = bucket_width
         self.num_buckets = num_buckets
+        self.prefetch_buffer = prefetch_buffer
 
     def parser(self, tfrecord):
         context_features = {
@@ -63,7 +65,7 @@ class SongDataset:
             tf.contrib.data.group_by_window(
                 key_func=key_func, reduce_func=reduce_func, window_size=self.batch_size))
 
-        self.song_dataset = song_dataset.prefetch(buffer_size=2 * self.batch_size)
+        self.song_dataset = song_dataset.prefetch(self.prefetch_buffer)
 
         return self.song_dataset
 
@@ -71,7 +73,7 @@ class SongDataset:
 class InputPipeline:
 
     def __init__(self, train_files, validation_files, test_files, batch_size, perform_shuffle,
-                 bucket_width, num_buckets):
+                 bucket_width, num_buckets, prefetch_buffer):
         self.train_files = train_files
         self.validation_files = validation_files
         self.test_files = test_files
@@ -79,6 +81,7 @@ class InputPipeline:
         self.perform_shuffle = perform_shuffle
         self.bucket_width = bucket_width
         self.num_buckets = num_buckets
+        self.prefetch_buffer = prefetch_buffer
 
         self._train_iterator_op = None
         self._validation_iterator_op = None
@@ -99,13 +102,13 @@ class InputPipeline:
     def create_datasets(self, dataset=SongDataset):
         train_dataset = dataset(
             self.train_files, self.batch_size, self.perform_shuffle,
-            self.bucket_width, self.num_buckets)
+            self.bucket_width, self.num_buckets, self.prefetch_buffer)
         validation_dataset = dataset(
             self.validation_files, self.batch_size, False,
-            self.bucket_width, self.num_buckets)
+            self.bucket_width, self.num_buckets, self.prefetch_buffer)
         test_dataset = dataset(
             self.test_files, self.batch_size, False,
-            self.bucket_width, self.num_buckets)
+            self.bucket_width, self.num_buckets, self.prefetch_buffer)
 
         self.train_dataset = train_dataset.create_dataset()
         self.validation_dataset = validation_dataset.create_dataset()
