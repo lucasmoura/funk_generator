@@ -162,7 +162,7 @@ class MusicDownloader:
     def download_all_songs(self):
         self.load_api_key()
 
-        for artist in os.listdir(self.data_folder):
+        for artist in os.listdir(str(self.data_folder)):
 
             artist_path = self.data_folder / artist
             if not artist_path.is_dir():
