@@ -1,5 +1,5 @@
-import contextlib
 import pickle
+import random
 import os
 
 import numpy as np
@@ -44,113 +44,54 @@ class SongLyricsModel:
     def add_train_op(self, loss):
         raise NotImplementedError
 
-    @contextlib.contextmanager
-    def initialize_session(self):
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
-
-        checkpoint = tf.train.latest_checkpoint(self.config.checkpoint_path)
-        saver = tf.train.Saver()
-
-        with tf.Session(config=config) as sess:
-            if self.config.use_checkpoint:
-                print('Load checkpoint: {}'.format(checkpoint))
-                saver.restore(sess, checkpoint)
-            else:
-                print('Creating new model')
-                os.makedirs(self.config.checkpoint_path)
-
-                sess.run(tf.global_variables_initializer())
-
-            yield (sess, saver)
-
     def run_epoch(self, sess, ops, feed_dict, training=True):
         costs = 0
         num_iters = 0
-        initial = True
         state = None
 
         while True:
             try:
-                if not initial:
+
+                if random.random() >= 0.01 and state is not None:
                     feed_dict[self.initial_state] = state
 
                 _, batch_loss, state = sess.run(ops, feed_dict=feed_dict)
 
                 costs += batch_loss
                 num_iters += 1
-                initial = False
 
             except tf.errors.OutOfRangeError:
                 return np.exp(costs / num_iters)
 
-    def fit(self, sess):
+    def fit(self, sess, saver):
         best_perplexity = 10000000
         train_feed_dict = self.create_train_feed_dict()
-        validation_feed_dict = self.create_validation_feed_dict()
 
-        with self.initialize_session() as (sess, saver):
-            for i in range(self.config.num_epochs):
-                print('Running epoch: {}'.format(i + 1))
-                ops = [self.train_op, self.train_loss, self.train_state]
-                sess.run(self.train_iterator.initializer)
-                train_perplexity = self.run_epoch(sess, ops, train_feed_dict)
-                print('Train perplexity: {:.3f}'.format(train_perplexity))
+        for i in range(self.config.num_epochs):
+            print('Running epoch: {}'.format(i + 1))
+            ops = [self.train_op, self.train_loss, self.train_state]
+            sess.run(self.train_iterator.initializer)
+            train_perplexity = self.run_epoch(sess, ops, train_feed_dict)
+            print('Train perplexity: {:.3f}'.format(train_perplexity))
 
-                ops = [self.no_op, self.validation_loss, self.validation_state]
-                sess.run(self.validation_iterator.initializer)
-                val_perplexity = self.run_epoch(sess, ops, validation_feed_dict)
-                print('Validation perplexity: {:.3f}'.format(val_perplexity))
+            if train_perplexity < best_perplexity:
+                best_perplexity = train_perplexity
+                print('New best perplexity found !  {:.3f}'.format(best_perplexity))
 
-                if val_perplexity < best_perplexity:
-                    best_perplexity = val_perplexity
-                    print('New best perplexity found !  {:.3f}'.format(best_perplexity))
+                saver.save(
+                    sess, os.path.join(self.config.checkpoint_path, 'song_model.ckpt'))
 
-                    saver.save(
-                        sess, os.path.join(self.config.checkpoint_path, 'song_model.ckpt'))
+    def predict(self, sess, state, word):
+        input_word_id = np.array([[word]])
+        feed_dict = self.create_generate_feed_dict(
+            data=input_word_id,
+            temperature=0.6,
+            state=state)
 
-                print('Song generated for epoch: {}'.format(i + 1))
-                print(' '.join(self.generate(sess)))
+        probs, state = sess.run(
+            [self.generate_predictions, self.generate_state], feed_dict=feed_dict)
 
-                print()
-
-    def generate(self, sess, num_out=200):
-        state = sess.run(self.cell.zero_state(1, tf.float32))
-        word = self.word2index['<begin>']
-
-        song = []
-
-        for i in range(num_out):
-            input_word_id = np.array([[word]])
-            feed_dict = self.create_generate_feed_dict(
-                data=input_word_id,
-                temperature=0.7,
-                state=state)
-            probs, state = sess.run(
-                [self.generate_predictions, self.generate_state], feed_dict=feed_dict)
-
-            probs = probs[0].reshape(-1)
-
-            while True:
-                generated_word_id = np.random.choice(
-                    np.arange(len(probs)), p=probs)
-                word = generated_word_id
-                generated_word = self.index2word.get(generated_word_id, 1)
-
-                if generated_word != '<UNK>':
-                    break
-
-            if generated_word == '<br>':
-                generated_word = '\n'
-            elif generated_word == '<par>':
-                generated_word = '\n\n'
-
-            if generated_word == '<end>':
-                break
-
-            song.append(str(generated_word))
-
-        return song
+        return probs, state
 
     def build_graph(self):
         with tf.name_scope('noop'):

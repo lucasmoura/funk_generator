@@ -13,6 +13,7 @@ class RecurrentConfig(ModelConfig):
         self.num_units = model_params['num_units']
         self.embedding_dropout = model_params['embedding_dropout']
         self.lstm_state_dropout = model_params['lstm_state_dropout']
+        self.lstm_input_dropout = model_params['lstm_input_dropout']
         self.lstm_output_dropout = model_params['lstm_output_dropout']
         self.weight_decay = model_params['weight_decay']
         self.min_val = model_params['min_val']
@@ -26,6 +27,8 @@ class RecurrentModel(SongLyricsModel):
             tf.float32, name='embedding_dropout')
         self.lstm_state_dropout_placeholder = tf.placeholder(
             tf.float32, name='lstm_state_dropout')
+        self.lstm_input_dropout_placeholder = tf.placeholder(
+            tf.float32, name='lstm_input_dropout')
         self.lstm_output_dropout_placeholder = tf.placeholder(
             tf.float32, name='lstm_output_dropout')
 
@@ -36,6 +39,7 @@ class RecurrentModel(SongLyricsModel):
         feed_dict = {
             self.embedding_dropout_placeholder: self.config.embedding_dropout,
             self.lstm_state_dropout_placeholder: self.config.lstm_state_dropout,
+            self.lstm_input_dropout_placeholder: self.config.lstm_input_dropout,
             self.lstm_output_dropout_placeholder: self.config.lstm_output_dropout,
         }
 
@@ -45,6 +49,7 @@ class RecurrentModel(SongLyricsModel):
         feed_dict = {
             self.embedding_dropout_placeholder: 1.0,
             self.lstm_state_dropout_placeholder: 1.0,
+            self.lstm_input_dropout_placeholder: 1.0,
             self.lstm_output_dropout_placeholder: 1.0,
         }
 
@@ -78,27 +83,28 @@ class RecurrentModel(SongLyricsModel):
         return inputs
 
     def add_logits_op(self, data_batch, size_batch, reuse=False):
-        variational_recurrent = False if reuse else True
-
         with tf.variable_scope('logits', reuse=reuse):
             data_embeddings = self.add_embeddings_op(data_batch)
 
             with tf.name_scope('recurrent_layer'):
-                def make_cell():
+                def make_cell(input_size):
                     lstm_cell = tf.nn.rnn_cell.LSTMCell(
                         self.config.num_units)
                     drop_cell = tf.nn.rnn_cell.DropoutWrapper(
                         lstm_cell,
                         state_keep_prob=self.lstm_state_dropout_placeholder,
                         output_keep_prob=self.lstm_output_dropout_placeholder,
-                        variational_recurrent=variational_recurrent,
-                        input_size=self.config.num_units,
+                        variational_recurrent=True,
+                        input_size=input_size,
                         dtype=tf.float32)
 
                     return drop_cell
 
+                input_sizes = [
+                    self.config.embedding_size, self.config.num_units, self.config.num_units
+                ]
                 self.cell = tf.nn.rnn_cell.MultiRNNCell(
-                    [make_cell() for _ in range(self.config.num_layers)])
+                    [make_cell(input_sizes[i]) for i in range(self.config.num_layers)])
 
                 self.initial_state = self.cell.zero_state(
                     tf.shape(data_batch)[0], tf.float32)
@@ -114,14 +120,29 @@ class RecurrentModel(SongLyricsModel):
             with tf.name_scope('logits'):
                 flat_outputs = tf.reshape(outputs, [-1, self.config.num_units])
 
+                weights = tf.get_variable(
+                    'weights',
+                    initializer=tf.contrib.layers.xavier_initializer(),
+                    shape=(self.config.num_units, self.config.embedding_size),
+                    dtype=tf.float32)
+
                 bias = tf.get_variable(
                     'bias',
+                    initializer=tf.ones_initializer(),
+                    shape=(self.config.embedding_size),
+                    dtype=tf.float32)
+
+                flat_inputs = tf.matmul(
+                    flat_outputs, weights) + bias
+
+                bias_logits = tf.get_variable(
+                    'bias_logits',
                     initializer=tf.ones_initializer(),
                     shape=(self.config.vocab_size),
                     dtype=tf.float32)
 
                 flat_logits = tf.matmul(
-                    flat_outputs, tf.transpose(self.embeddings_dropout)) + bias
+                    flat_inputs, tf.transpose(self.embeddings)) + bias_logits
 
                 batch_size = tf.shape(data_batch)[0]
                 max_len = tf.shape(data_batch)[1]

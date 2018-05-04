@@ -1,10 +1,12 @@
 import argparse
+import contextlib
 import os
 
 import tensorflow as tf
 
 from model.input_pipeline import InputPipeline
 from model.rnn import RecurrentModel, RecurrentConfig
+from model.song_generator import GreedySongGenerator, BeamSearchSongGenerator
 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -93,6 +95,11 @@ def create_argparse():
                                  type=float,
                                  help='LSTM output dropout')
 
+    argument_parser.add_argument('-lid',
+                                 '--lstm-input-dropout',
+                                 type=float,
+                                 help='LSTM input dropout')
+
     argument_parser.add_argument('-lsd',
                                  '--lstm-state-dropout',
                                  type=float,
@@ -128,7 +135,34 @@ def create_argparse():
                                  type=int,
                                  help='Size of prefetch buffer')
 
+    argument_parser.add_argument('-pf',
+                                 '--perform-shuffle',
+                                 type=int,
+                                 help='If we shoudl shuffle the batches when training the model')
+
     return argument_parser
+
+
+@contextlib.contextmanager
+def initialize_session(user_config):
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+
+    checkpoint = tf.train.latest_checkpoint(user_config.checkpoint_path)
+    saver = tf.train.Saver()
+
+    with tf.Session(config=config) as sess:
+        if user_config.use_checkpoint:
+            print('Load checkpoint: {}'.format(checkpoint))
+            saver.restore(sess, checkpoint)
+        else:
+            print('Creating new model')
+            if not os.path.exists(user_config.checkpoint_path):
+                os.makedirs(user_config.checkpoint_path)
+
+            sess.run(tf.global_variables_initializer())
+
+        yield (sess, saver)
 
 
 def main():
@@ -142,13 +176,14 @@ def main():
     num_buckets = user_args['num_buckets']
     bucket_width = user_args['bucket_width']
     prefetch_buffer = user_args['prefetch_buffer']
+    perform_shuffle = True if user_args['perform_shuffle'] == 1 else False
 
     dataset = InputPipeline(
         train_files=train_file,
         validation_files=validation_file,
         test_files=test_file,
         batch_size=batch_size,
-        perform_shuffle=True,
+        perform_shuffle=perform_shuffle,
         bucket_width=bucket_width,
         num_buckets=num_buckets,
         prefetch_buffer=prefetch_buffer)
@@ -157,11 +192,18 @@ def main():
 
     config = RecurrentConfig(user_args)
     model = RecurrentModel(dataset, config)
+    model.build_graph()
 
-    with tf.Session() as sess:
-        model.build_graph()
+    with initialize_session(config) as (sess, saver):
+        model.fit(sess, saver)
 
-        model.fit(sess)
+        generator = GreedySongGenerator(model)
+        print('Generating song (Greedy) ...')
+        generator.generate(sess)
+
+        beam_generator = BeamSearchSongGenerator(model)
+        print('Generating song (Beam Search) ...')
+        beam_generator.generate(sess)
 
 
 if __name__ == '__main__':
