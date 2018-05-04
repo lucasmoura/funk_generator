@@ -29,12 +29,12 @@ class MusicDataset:
         song_text = re.sub(r"\{", "", song_text)
         song_text = re.sub(r":", "", song_text)
         song_text = re.sub(r"\.", "  ", song_text)
+        song_text = re.sub(r"\n", " \n ", song_text)
+        song_text = re.sub(r'"', " ", song_text)
+        song_text = re.sub(r"\[.*\]", " ", song_text)
 
         song_text = '<begin> ' + song_text + ' <end>'
-        song_text = re.sub(r"\n", ' <br> ', song_text)
         song_text = re.sub(r'\s{2,}', ' ', song_text)
-        song_text = re.sub('<br> <br>', '<par>', song_text)
-        song_text = song_text.lower()
 
         song_text = song_text.split(' ')
 

@@ -114,6 +114,16 @@ def create_argparse():
                         type=int,
                         help='Minimum word frequency required for a word to a part of the vocabulary')  # noqa
 
+    parser.add_argument('-vp',
+                        '--validation-percent',
+                        type=float,
+                        help='Percent of train dataset to use for validation')
+
+    parser.add_argument('-tp',
+                        '--test-percent',
+                        type=float,
+                        help='Percent of train dataset to use for test')
+
     return parser
 
 
@@ -125,7 +135,10 @@ def main():
     dataset_save_path = Path(user_args['dataset_save_path'])
     music_dataset = MusicDataset(data_folder, dataset_save_path)
 
-    music_dataset.create_dataset(validation_percent=0.1, test_percent=0.1)
+    validation_percent = user_args['validation_percent']
+    test_percent = user_args['test_percent']
+    music_dataset.create_dataset(
+        validation_percent=validation_percent, test_percent=test_percent)
     music_dataset.display_info()
 
     train_dataset = music_dataset.train_dataset
