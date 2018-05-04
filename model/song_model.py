@@ -13,10 +13,10 @@ class ModelConfig:
         self.embedding_size = model_params['embedding_size']
         self.learning_rate = model_params['learning_rate']
         self.num_epochs = model_params['num_epochs']
+        self.use_checkpoint = model_params['use_checkpoint']
         self.index2word_path = model_params['index2word_path']
         self.word2index_path = model_params['word2index_path']
         self.checkpoint_path = model_params['checkpoint_path']
-        self.use_checkpoint = model_params['use_checkpoint']
 
 
 class SongLyricsModel:
@@ -93,12 +93,25 @@ class SongLyricsModel:
 
         return probs, state
 
-    def build_graph(self):
-        with tf.name_scope('noop'):
-            self.no_op = tf.no_op()
-
+    def build_placeholders(self):
         with tf.name_scope('placeholders'):
             self.add_placeholders_op()
+
+            self.data_placeholder = tf.placeholder(tf.int32, [None, 1])
+            self.temperature_placeholder = tf.placeholder(tf.float32)
+
+    def build_generate_graph(self, reuse=True):
+        with tf.name_scope('generate'):
+
+            generate_size = np.array([1])
+            generate_logits, self.generate_state = self.add_logits_op(
+                self.data_placeholder, generate_size, reuse=reuse)
+
+            temperature_logits = tf.div(generate_logits, self.temperature_placeholder)
+            self.generate_predictions = tf.nn.softmax(temperature_logits)
+
+    def build_graph(self):
+        self.build_placeholders()
 
         with tf.name_scope('iterator'):
             self.train_iterator = self.dataset.train_iterator
@@ -127,10 +140,4 @@ class SongLyricsModel:
             self.validation_loss = self.add_loss_op(
                 validation_logits, validation_labels, validation_size)
 
-        with tf.name_scope('generate'):
-            generate_size = np.array([1])
-            generate_logits, self.generate_state = self.add_logits_op(
-                self.data_placeholder, generate_size, reuse=True)
-
-            temperature_logits = tf.div(generate_logits, self.temperature_placeholder)
-            self.generate_predictions = tf.nn.softmax(temperature_logits)
+        self.build_generate_graph()

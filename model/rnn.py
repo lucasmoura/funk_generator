@@ -32,9 +32,6 @@ class RecurrentModel(SongLyricsModel):
         self.lstm_output_dropout_placeholder = tf.placeholder(
             tf.float32, name='lstm_output_dropout')
 
-        self.data_placeholder = tf.placeholder(tf.int32, [None, 1])
-        self.temperature_placeholder = tf.placeholder(tf.float32)
-
     def create_train_feed_dict(self):
         feed_dict = {
             self.embedding_dropout_placeholder: self.config.embedding_dropout,
