@@ -30,9 +30,21 @@ class GreedySongGenerator:
 
         return state, word
 
-    def generate(self, sess, temperature=0.7, num_out=200):
-        state, word = self.create_initial_state(sess)
+    def create_prime_state(self, sess, prime_words, temperature):
+        state = sess.run(self.model.cell.zero_state(1, tf.float32))
 
+        for word in prime_words:
+            id_word = self.model.word2index.get(word, -1)
+
+            if id_word == -1:
+                continue
+
+            last_word = id_word
+            _, state = self.model.predict(sess, state, id_word, temperature)
+
+        return state, last_word
+
+    def generate(self, sess, prime_words, temperature=0.7, num_out=200):
         song = []
         current_word = "<UNK>"
         repetition_counter = 0
@@ -40,6 +52,12 @@ class GreedySongGenerator:
         sequences = []
         sequence = ""
         restart = False
+
+        if prime_words:
+            state, word = self.create_prime_state(sess, prime_words, temperature)
+            song.extend(prime_words)
+        else:
+            state, word = self.create_initial_state(sess)
 
         for i in range(num_out):
             probs, state = self.model.predict(sess, state, word, temperature)
