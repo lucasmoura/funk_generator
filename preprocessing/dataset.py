@@ -12,9 +12,27 @@ class MusicDataset:
         self.data_folder = Path(data_folder)
         self.dataset_save_path = self.data_folder / dataset_save_path
 
+    def parse_song(self, song_text):
+        parsed_song = []
+
+        for lines in song_text.split('\n'):
+            words = lines.split()
+
+            if not words:
+                continue
+
+            parsed_words = [words[0]]
+
+            for word in words[1:]:
+                parsed_words.append(word.lower())
+
+            parsed_song.append(' '.join(parsed_words))
+
+        return '\n'.join(parsed_song)
+
     def read_song(self, song_path):
         with song_path.open() as song_file:
-            return song_file.read()
+            return self.parse_song(song_file.read())
 
     def get_num_words_from_song(self, song):
         return len(song.replace('\n', ' ').split(' '))
