@@ -48,6 +48,11 @@ def create_argparse():
                                  type=int,
                                  help='Number of units to use in the lstm cell')
 
+    argument_parser.add_argument('-t',
+                                 '--temperature',
+                                 type=float,
+                                 help='Logits temperature')
+
     return argument_parser
 
 
@@ -65,8 +70,10 @@ def main():
 
     with initialize_session(config) as (sess, saver):
         generator = GreedySongGenerator(model)
+        temperature = user_args['temperature']
+
         print('Generating song (Greedy) ...')
-        generator.generate(sess)
+        generator.generate(sess, temperature=temperature)
 
 
 if __name__ == '__main__':

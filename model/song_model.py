@@ -81,11 +81,11 @@ class SongLyricsModel:
                 saver.save(
                     sess, os.path.join(self.config.checkpoint_path, 'song_model.ckpt'))
 
-    def predict(self, sess, state, word):
+    def predict(self, sess, state, word, temperature):
         input_word_id = np.array([[word]])
         feed_dict = self.create_generate_feed_dict(
             data=input_word_id,
-            temperature=0.6,
+            temperature=temperature,
             state=state)
 
         probs, state = sess.run(
