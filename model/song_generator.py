@@ -9,13 +9,22 @@ class GreedySongGenerator:
 
     def parse_song(self, song_list):
         parsed_song = []
+        is_mc = False
 
         for index in range(len(song_list)):
             curr_word = song_list[index]
+
             if curr_word[0].isupper():
                 parsed_song.append('\n')
 
-            parsed_song.append(curr_word)
+            if is_mc:
+                parsed_song.append('Neural')
+                is_mc = False
+            else:
+                parsed_song.append(curr_word)
+
+            if curr_word.lower() == 'mc':
+                is_mc = True
 
         print(' '.join(parsed_song))
 
@@ -39,10 +48,15 @@ class GreedySongGenerator:
             if id_word == -1:
                 continue
 
-            last_word = id_word
-            _, state = self.model.predict(sess, state, id_word, temperature)
+            probs, state = self.model.predict(sess, state, id_word, temperature)
 
-        return state, last_word
+        while True:
+            generated_word_id = self.weighted_pick(probs)
+
+            if generated_word_id != 1:
+                break
+
+        return state, generated_word_id
 
     def generate(self, sess, prime_words, temperature=0.7, num_out=200):
         song = []
