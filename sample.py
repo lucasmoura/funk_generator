@@ -69,7 +69,7 @@ def main():
     model.build_placeholders()
     model.build_generate_graph(reuse=False)
 
-    with initialize_session(config) as (sess, saver):
+    with initialize_session(config, use_gpu=False) as (sess, saver):
         generator = GreedySongGenerator(model)
         temperature = user_args['temperature']
 
