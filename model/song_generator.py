@@ -7,7 +7,7 @@ class GreedySongGenerator:
     def __init__(self, model):
         self.model = model
 
-    def parse_song(self, song_list):
+    def parse_song(self, song_list, html):
         parsed_song = []
         is_mc = False
 
@@ -15,7 +15,10 @@ class GreedySongGenerator:
             curr_word = song_list[index]
 
             if curr_word[0].isupper():
-                parsed_song.append('\n')
+                if not html:
+                    parsed_song.append('\n')
+                else:
+                    parsed_song.append('<br>')
 
             if is_mc:
                 parsed_song.append('Neural')
@@ -26,7 +29,7 @@ class GreedySongGenerator:
             if curr_word.lower() == 'mc':
                 is_mc = True
 
-        print(' '.join(parsed_song))
+        return ' '.join(parsed_song)
 
     def weighted_pick(self, weights):
         t = np.cumsum(weights)
@@ -58,7 +61,7 @@ class GreedySongGenerator:
 
         return state, generated_word_id
 
-    def generate(self, sess, prime_words=None, temperature=0.7, num_out=200):
+    def generate(self, sess, prime_words=None, temperature=0.7, num_out=200, html=False):
         song = []
         current_word = "<UNK>"
         repetition_counter = 0
@@ -122,4 +125,4 @@ class GreedySongGenerator:
 
             song.append(str(generated_word))
 
-        return self.parse_song(song)
+        return self.parse_song(song, html)

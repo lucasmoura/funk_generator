@@ -74,7 +74,7 @@ def main():
         temperature = user_args['temperature']
 
         print('Generating song (Greedy) ...')
-        generator.generate(sess, prime_words=prime_words, temperature=temperature)
+        print(generator.generate(sess, prime_words=prime_words, temperature=temperature))
 
 
 if __name__ == '__main__':
