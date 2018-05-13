@@ -60,6 +60,7 @@ def main():
     argument_parser = create_argparse()
     user_args = vars(argument_parser.parse_args())
     user_args['use_checkpoint'] = True
+    prime_words = []
 
     user_args = defaultdict(int, user_args)
 
@@ -73,7 +74,7 @@ def main():
         temperature = user_args['temperature']
 
         print('Generating song (Greedy) ...')
-        generator.generate(sess, temperature=temperature)
+        generator.generate(sess, prime_words=prime_words, temperature=temperature)
 
 
 if __name__ == '__main__':
