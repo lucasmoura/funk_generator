@@ -3,7 +3,7 @@ import os
 
 from model.input_pipeline import InputPipeline
 from model.rnn import RecurrentModel, RecurrentConfig
-from model.song_generator import GreedySongGenerator, BeamSearchSongGenerator
+from model.song_generator import GreedySongGenerator
 from utils.session_manager import initialize_session
 
 
@@ -176,10 +176,6 @@ def main():
         generator = GreedySongGenerator(model)
         print('Generating song (Greedy) ...')
         generator.generate(sess)
-
-        beam_generator = BeamSearchSongGenerator(model)
-        print('Generating song (Beam Search) ...')
-        beam_generator.generate(sess)
 
 
 if __name__ == '__main__':

@@ -58,7 +58,7 @@ class GreedySongGenerator:
 
         return state, generated_word_id
 
-    def generate(self, sess, prime_words, temperature=0.7, num_out=200):
+    def generate(self, sess, prime_words=None, temperature=0.7, num_out=200):
         song = []
         current_word = "<UNK>"
         repetition_counter = 0
