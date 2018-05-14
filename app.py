@@ -1,3 +1,6 @@
+import pickle
+import random
+
 from collections import defaultdict
 
 from flask import Flask, request, jsonify
@@ -59,6 +62,27 @@ kondzilla_sampler = create_sample(kondzilla_args)
 proibidao_sampler = create_sample(proibidao_args)
 ostentacao_sampler = create_sample(ostentacao_args)
 
+def load(path):
+    with open(path, 'rb') as f:
+        return pickle.load(f)
+
+all_songs = load('generated_songs/generated-all-songs.pkl')
+kondzilla_songs = load('generated_songs/generated-all-songs.pkl')
+proibidao_songs = load('generated_songs/generated-all-songs.pkl')
+ostentacao_songs = load('generated_songs/generated-all-songs.pkl')
+
+def get_song(model_id):
+    random_num = random.randint(0, len(all_songs) - 1)
+
+    if model_id == 1:
+        return all_songs[random_num]
+    elif model_id == 2:
+        return kondzilla_songs[random_num]
+    elif model_id == 3:
+        return proibidao_songs[random_num]
+    else:
+        return ostentacao_songs[random_num]
+
 
 # API route
 @app.route('/api', methods=['POST'])
@@ -70,16 +94,19 @@ def api():
     """
     data = request.json
     model_id = data['id']
-    print(model_id)
+    prime_words = data['sentence']
 
-    if model_id == 1:
-        output_data = all_sampler(html=True)
-    elif model_id == 2:
-        output_data = kondzilla_sampler(html=True)
-    elif model_id == 3:
-        output_data = proibidao_sampler(html=True)
+    if prime_words == None:
+        output_data = get_song(model_id)
     else:
-        output_data = ostentacao_sampler(html=True)
+        if model_id == 1:
+            output_data = all_sampler(prime_words, html=True)
+        elif model_id == 2:
+            output_data = kondzilla_sampler(prime_words, html=True)
+        elif model_id == 3:
+            output_data = proibidao_sampler(prime_words, html=True)
+        else:
+            output_data = ostentacao_sampler(prime_words, html=True)
 
     return jsonify(output_data)
 
