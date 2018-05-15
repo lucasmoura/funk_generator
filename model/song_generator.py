@@ -14,6 +14,10 @@ class GreedySongGenerator:
         for index in range(len(song_list)):
             curr_word = song_list[index]
 
+            if index == 0:
+                parsed_song.append(curr_word)
+                continue
+
             if curr_word[0].isupper():
                 if not html:
                     parsed_song.append('\n')
@@ -45,6 +49,7 @@ class GreedySongGenerator:
     def create_prime_state(self, sess, prime_words, temperature):
         state = sess.run(self.model.cell.zero_state(1, tf.float32))
 
+        probs = None
         for word in prime_words:
             id_word = self.model.word2index.get(word, -1)
 
@@ -53,11 +58,14 @@ class GreedySongGenerator:
 
             probs, state = self.model.predict(sess, state, id_word, temperature)
 
-        while True:
-            generated_word_id = self.weighted_pick(probs)
+        if probs is not None:
+            while True:
+                generated_word_id = self.weighted_pick(probs)
 
-            if generated_word_id != 1:
-                break
+                if generated_word_id != 1:
+                    break
+        else:
+            return self.create_initial_state(sess)
 
         return state, generated_word_id
 
@@ -65,6 +73,7 @@ class GreedySongGenerator:
         song = []
         current_word = "<UNK>"
         repetition_counter = 0
+        unk_count = 0
 
         sequences = []
         sequence = ""
@@ -82,9 +91,14 @@ class GreedySongGenerator:
 
             while True:
                 generated_word_id = self.weighted_pick(probs)
-                generated_word = self.model.index2word.get(generated_word_id, 1)
+                generated_word = str(self.model.index2word.get(generated_word_id, 1))
 
                 if generated_word == '<UNK>':
+                    unk_count += 0
+
+                    if unk_count >= 150:
+                        return -1
+
                     continue
 
                 if generated_word == '<end>' and len(song) < 100:
@@ -97,9 +111,12 @@ class GreedySongGenerator:
                     repetition_counter += 1
 
                 if repetition_counter >= 5:
+                    if repetition_counter >= 100:
+                        return -1
                     continue
 
                 if generated_word != '<UNK>':
+                    unk_count = 0
                     break
 
             word = generated_word_id

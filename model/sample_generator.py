@@ -21,8 +21,9 @@ def create_sample(model_config, html=False):
         saver.restore(sess, checkpoint)
         generator = GreedySongGenerator(model)
 
-    def sample(html):
+    def sample(prime_words, html):
+        prime_words = prime_words.split()
         with graph.as_default():
-            return generator.generate(sess, html=html)
+            return generator.generate(sess, prime_words=prime_words, html=html)
 
     return sample
