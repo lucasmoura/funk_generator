@@ -1,0 +1,8 @@
+tensorflow-gpu==1.4.1
+beautifulsoup4
+requests
+flask
+flask-corps
+nltk
+wordcloud
+flake8
